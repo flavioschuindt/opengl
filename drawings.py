@@ -2,6 +2,8 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
 import sys
+import numpy
+from math import sqrt, cos, sin
 
 name = 'Free Drawings'
 
@@ -30,6 +32,43 @@ class Drawing:
         self.matrix[13] += y
         self.matrix[14] += z
 
+    def rotate(self, teta, x, y, z):
+
+        glMatrixMode(GL_MODELVIEW)
+        glPushMatrix()
+        glRotatef(teta,x,y,z)
+        modified_modelview = (GLfloat * 16)()
+        modified_modelview =  glGetFloatv(GL_MODELVIEW_MATRIX).tolist()
+        #import pdb
+        #pdb.set_trace()
+        self.matrix = [modified_modelview[i:i+4] for i in range(0, len(modified_modelview), 4)]
+        glPopMatrix()
+
+        '''# normalize vector
+
+        norm = sqrt(x*x + y*y + z*z)
+
+        x, y, z = (x/norm, y/norm, z/norm)
+
+        c = cos(teta)
+        s = sin(teta)
+
+        rotate_matrix = numpy.matrix([
+                                        [x*x*(1-c)+c, x*y*(1-c)-z*s, x*z*(1-c)+y*s, 0],
+                                        [y*x*(1-c)+z*s, y*y*(1-c)+c, y*z*(1-c)-x*s, 0],
+                                        [x*z*(1-c)-y*s, y*z*(1-c)+x*s, z*z*(1-c)+c, 0],
+                                        [0, 0, 0, 1]
+                                    ])
+
+        current_modelview_matrix = [self.matrix[i:i+4] for i in range(0, len(self.matrix), 4)]
+
+        self.matrix = numpy.matrix(
+                                        current_modelview_matrix
+                                    )
+
+        res = numpy.dot(self.matrix, rotate_matrix).T.tolist()
+        self.matrix = reduce(lambda x,y: x+y, res)'''
+
 scene = []
 current_drawing = None
 picked_drawing = None
@@ -37,6 +76,7 @@ picked_drawing_point = None
 
 MODE_DRAWING = 0
 MODE_PICKING = 1
+MODE_ROTATE = 2
 mode = MODE_DRAWING
 
 PICKING_WINDOW_W = 9
@@ -48,6 +88,20 @@ def main():
     glutInitWindowSize(500, 500)
     glutInitWindowPosition(0, 0)
     glutCreateWindow(name)
+
+
+    glClearDepth(1.0)                   # Enables Clearing Of The Depth Buffer
+    glDepthFunc(GL_LESS)                # The Type Of Depth Test To Do
+    glEnable(GL_DEPTH_TEST)             # Enables Depth Testing
+    glShadeModel(GL_SMOOTH)             # Enables Smooth Color Shading
+    
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()                    # Reset The Projection Matrix
+                                        # Calculate The Aspect Ratio Of The Window
+    gluPerspective(45.0, float(500)/float(500), 0.1, 10)
+
+    glMatrixMode(GL_MODELVIEW)
+
 
     # Disable anti-aliasing
 
@@ -87,7 +141,7 @@ def display():
     
     global scene
     glClearColor(0.5, 0.5, 0.5, 1.0) # Set background to gray
-    glClear(GL_COLOR_BUFFER_BIT) # Clear the window
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) # Clear the window
 
     glLineWidth(2)
 
@@ -95,6 +149,7 @@ def display():
         glColor3ub(drawing.r, drawing.g, drawing.b)
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
+        glLoadIdentity()
         glMultMatrixf(drawing.matrix)
         size_drawing = len(drawing.points)
         for i in range(size_drawing - 1):
@@ -195,6 +250,10 @@ def mouse_click(button, state, x, y):
             if picked_drawing is not None:
                 picked_drawing_point = Point(x=x, y=current_h - y)
 
+        elif mode == MODE_ROTATE:
+            picked_drawing.rotate(30, 0, 0, 1)
+            glutPostRedisplay()
+
 
     elif button == GLUT_RIGHT_BUTTON and state == GLUT_DOWN:
 
@@ -211,5 +270,7 @@ def keyboard(key, x, y):
         mode = MODE_DRAWING
     elif key == 'p':
         mode = MODE_PICKING
+    elif key == 'r':
+        mode = MODE_ROTATE
 
 if __name__ == '__main__': main()
