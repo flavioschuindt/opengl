@@ -1,12 +1,13 @@
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
+from math import pi, cos, sin
  
 torus = None
 
 class Torus:
 
-	def __init__(self, inner_radius=0.5, outter_radius=1, sides=50, rings=50, x_rotated=0, y_rotated=0, z_rotated=0):
+	def __init__(self, inner_radius=1, outter_radius=0.2, sides=50, rings=50, x_rotated=0, y_rotated=0, z_rotated=0):
 
 		self.inner_radius = inner_radius
 		self.outter_radius = outter_radius
@@ -15,6 +16,7 @@ class Torus:
 		self.x_rotated = x_rotated
 		self.y_rotated = y_rotated
 		self.z_rotated = z_rotated
+		self.points = []
 
 	def rotate(self, x=0, y=0, z=0):
 		self.x_rotated += x
@@ -29,6 +31,27 @@ class Torus:
 		gluPerspective(40.0, x/y, 0.5, 20.0)
 
 		glViewport(0, 0, x, y)
+
+	def _draw(self, numc, numt):
+		self.points = []
+		two_pi = pi * 2
+		a = self.outter_radius
+		c = self.inner_radius + self.outter_radius
+		for i in range(numc):
+			glBegin(GL_QUAD_STRIP)
+			for j in range(numt + 1):
+				k = 1
+				while k >= 0:
+					s = (i + k) % numc + 0.5
+					t = j % numt
+
+					x = (c + a * cos(s * two_pi / numc)) * cos(t * two_pi / numt)
+					y = (c + a * cos(s * two_pi / numc)) * sin(t * two_pi / numt) 
+					z = a * sin(s * two_pi / numc)
+					k -= 1
+					self.points.append((x, y, z))
+					glVertex3d(x, y, z)
+			glEnd()
 
 	def display(self):
 		glMatrixMode(GL_MODELVIEW)
@@ -48,17 +71,13 @@ class Torus:
 		glRotatef(self.y_rotated, 0.0, 1.0, 0.0)
 		# rotation about Z axis
 		glRotatef(self.z_rotated, 0.0, 0.0, 1.0)
-		# scaling transfomation 
-		glScalef(1.0, 1.0, 1.0)
-		#built-in (glut library) function , draw you a Torus.
 
-		glutSolidTorus(self.inner_radius, self.outter_radius, self.sides, self.rings)
+		self._draw(self.sides, self.rings)
+
 		#Flush buffers to screen
-		 
 		glFlush()
 
 		glutSwapBuffers()
-
 
 def display():
 	global torus
@@ -70,15 +89,17 @@ def reshape(x, y):
 
 def idle():
 	global torus
-	torus.rotate(y=1)
+	torus.rotate(y=0.1)
 	display()
 
 def main():
 	global torus
-	torus = Torus()
+	torus = Torus(sides=100, rings=100)
+
 	glutInit(sys.argv)
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB)
-	glutInitWindowSize(400, 350)
+	glutInitWindowSize(500, 500)
+	glutInitWindowPosition(450, 200)
 	glutCreateWindow("Torus")
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 	glClearColor(0.0, 0.0, 0.0, 0.0)
