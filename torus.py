@@ -2,8 +2,10 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
 from math import pi, cos, sin
+import random
  
 scene = []
+factor = 1
 
 class Torus:
 
@@ -19,6 +21,13 @@ class Torus:
 		self.color = color
 		self.position = position
 		self.points = []
+		self.matrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+		self.translate(*self.position)
+
+	def translate(self, x=0, y=0, z=0):
+		self.matrix[12] += x
+		self.matrix[13] += y
+		self.matrix[14] += z
 
 	def rotate(self, x=0, y=0, z=0):
 		self.x_rotated += x
@@ -48,21 +57,12 @@ def display():
 	# clear the drawing buffer.
 	glClear(GL_COLOR_BUFFER_BIT)
 	for torus in scene:
-		glMatrixMode(GL_MODELVIEW)
-		# clear the identity matrix.
-		glLoadIdentity()
-		# traslate the draw by z = -4.0
-		# Note this when you decrease z like -8.0 the drawing will looks far , or smaller.
-		glTranslatef(*torus.position)
 
-		glColor3f(*torus.color) 
-		# changing in transformation matrix.
-		# rotation about X axis
-		glRotatef(torus.x_rotated, 1.0, 0.0, 0.0)
-		# rotation about Y axis
-		glRotatef(torus.y_rotated, 0.0, 1.0, 0.0)
-		# rotation about Z axis
-		glRotatef(torus.z_rotated, 0.0, 0.0, 1.0)
+		glMatrixMode(GL_MODELVIEW)
+		glLoadIdentity()
+		glColor3f(*torus.color)
+		glPushMatrix()
+		glMultMatrixf(torus.matrix)
 
 		points = torus.calc_points()
 
@@ -71,7 +71,7 @@ def display():
 			glVertex3d(*point)
 		glEnd()
 
-		#Flush buffers to screen
+		glPopMatrix()
 		glFlush()
 
 	glutSwapBuffers()
@@ -88,21 +88,25 @@ def reshape(x, y):
 	glutPostRedisplay()
 
 def idle():
+	global factor
 	for torus in scene:
-		torus.rotate(y=10)
+		x = factor * random.uniform(0, 0.1)
+		y = factor * random.uniform(0, 0.1)
+		factor *= -1
+		torus.translate(x=x, y=y)
 	display()
 
 def main():
 	global scene
-	t1 = Torus(sides=4, rings=4000, color=(0,1,0), position=(1,0,-10))
-	t2 = Torus(sides=4, rings=4000, color=(1,0,0), position=(-1,2,-10))
+	t1 = Torus(sides=100, rings=1000, color=(0,1,0), position=(0,0,-10), inner_radius=0)
+	t2 = Torus(sides=100, rings=1000, color=(1,0,0), position=(-3,2,-10), inner_radius=0)
 
 	scene.append(t1)
 	scene.append(t2)
 
 	glutInit(sys.argv)
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB)
-	glutInitWindowSize(500, 500)
+	glutInitWindowSize(800, 800)
 	glutInitWindowPosition(450, 200)
 	glutCreateWindow("Torus")
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
